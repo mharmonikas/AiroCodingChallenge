@@ -8,6 +8,7 @@
         :root { color-scheme: light; font-family: Arial, sans-serif; color: #172033; background: #f4f7fb; }
         body { margin: 0; padding: 2rem 1rem; }
         main { max-width: 34rem; margin: 0 auto; background: #fff; border-radius: 0.75rem; padding: 2rem; box-shadow: 0 1px 8px #dce3ee; }
+        .page-actions { max-width: 34rem; margin: 0 auto 1rem; }
         h1 { margin-top: 0; font-size: 1.5rem; }
         p { color: #56647a; }
         label { display: block; font-weight: 600; margin-top: 1rem; }
@@ -21,9 +22,13 @@
     </style>
 </head>
 <body>
+<div class="page-actions">
+    <button id="logout-button" class="hidden" type="button">Log out</button>
+</div>
+
 <main>
     <h1>Travel Insurance Quotation</h1>
-    <p>Log in, then enter your trip details to receive a policy price.</p>
+    <p>Enter your trip details to receive a policy price.</p>
 
     <form id="login-form">
         <label for="email">Email</label>
@@ -70,11 +75,13 @@
     const quotationErrors = document.getElementById('quotation-errors');
     const quotationResult = document.getElementById('quotation-result');
     const quotationSubmit = quotationForm.querySelector('button[type="submit"]');
+    const logoutButton = document.getElementById('logout-button');
 
     function showCurrentForm() {
         const isLoggedIn = Boolean(localStorage.getItem('jwt_token'));
 
         loginForm.classList.toggle('hidden', isLoggedIn);
+        logoutButton.classList.toggle('hidden', !isLoggedIn);
         quotationForm.classList.toggle('hidden', !isLoggedIn);
     }
 
@@ -104,10 +111,7 @@
             const payload = await response.json();
 
             if (!response.ok) {
-                const validationMessages = payload.errors
-                    ? Object.values(payload.errors).flat().join(' ')
-                    : payload.message || 'Unable to log in.';
-                throw new Error(validationMessages);
+                throw new Error(response.status === 401 ? 'Invalid email or password.' : 'Login failed.');
             }
 
             localStorage.setItem('jwt_token', payload.token);
@@ -119,6 +123,30 @@
             loginErrors.style.display = 'block';
         } finally {
             loginSubmit.disabled = false;
+        }
+    });
+
+    logoutButton.addEventListener('click', async () => {
+        const token = localStorage.getItem('jwt_token');
+
+        logoutButton.disabled = true;
+
+        try {
+            if (token) {
+                await fetch('/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json',
+                    },
+                });
+            }
+        } finally {
+            localStorage.removeItem('jwt_token');
+            quotationErrors.style.display = 'none';
+            quotationResult.style.display = 'none';
+            logoutButton.disabled = false;
+            showCurrentForm();
         }
     });
 

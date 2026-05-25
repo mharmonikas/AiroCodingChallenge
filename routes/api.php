@@ -5,5 +5,6 @@ use App\Http\Controllers\QuotationController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:api');
 Route::post('/quotation', [QuotationController::class, 'store'])
     ->middleware(['auth:api', 'json.only']);
